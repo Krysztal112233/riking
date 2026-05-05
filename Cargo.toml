@@ -1,7 +1,13 @@
 [package]
+edition = "2024"
+license = "AGPL-3.0"
 name = "riking"
 version = "0.1.0"
-edition = "2024"
+description = "Unofficial OpenViking knowledge base HTTP API client for Rust"
+repository = "https://github.com/Krysztal112233/rinking"
+readme = "README.md"
+keywords = ["openviking", "api", "client", "knowledge-base", "http"]
+categories = ["api-bindings", "web-programming"]
 
 [dependencies]
 cfmt = { version = "0.*", package = "const_format" }
