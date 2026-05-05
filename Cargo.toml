@@ -6,8 +6,14 @@ version = "0.1.1"
 description = "Unofficial OpenViking knowledge base HTTP API client for Rust"
 repository = "https://github.com/Krysztal112233/riking"
 readme = "README.md"
+documentation = "https://docs.rs/riking"
+homepage = "https://github.com/Krysztal112233/riking"
 keywords = ["openviking", "api", "client", "knowledge-base", "http"]
 categories = ["api-bindings", "web-programming"]
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
 
 [dependencies]
 cfmt = { version = "0.*", package = "const_format" }
