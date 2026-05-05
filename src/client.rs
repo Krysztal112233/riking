@@ -2,7 +2,7 @@ use std::path::Path;
 
 use crate::endpoints;
 use crate::error::Error;
-use crate::types::v1::*;
+use crate::types::{VikingUri, v1::*};
 use reqwest::Client;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
@@ -182,6 +182,16 @@ impl VikingClient {
     }
 }
 
+macro_rules! make_path {
+    ($t:expr, $($a:expr),+ $(,)?) => {{
+        let mut _s = $t.to_owned();
+        $(
+            _s = _s.replacen("{}", &$a.to_string(), 1);
+        )+
+        _s
+    }};
+}
+
 fn q(pairs: &[(&str, Option<String>)]) -> Vec<(String, String)> {
     pairs
         .iter()
@@ -245,7 +255,8 @@ impl VikingClient {
 }
 
 impl VikingClient {
-    pub async fn pack_export(&self, uri: &str) -> Result<Vec<u8>, Error> {
+    pub async fn pack_export(&self, uri: impl Into<VikingUri>) -> Result<Vec<u8>, Error> {
+        let uri = uri.into();
         let req = PackExportRequest {
             uri: uri.to_string(),
         };
@@ -273,7 +284,7 @@ impl VikingClient {
 impl VikingClient {
     pub async fn fs_ls(
         &self,
-        uri: &str,
+        uri: impl Into<VikingUri>,
         simple: Option<bool>,
         recursive: Option<bool>,
         output: Option<&str>,
@@ -282,6 +293,7 @@ impl VikingClient {
         node_limit: Option<i64>,
         limit: Option<i64>,
     ) -> Result<Vec<FsEntry>, Error> {
+        let uri = uri.into();
         let query = q(&[
             ("uri", Some(uri.to_string())),
             ("simple", simple.map(|v| v.to_string())),
@@ -297,7 +309,7 @@ impl VikingClient {
 
     pub async fn fs_tree(
         &self,
-        uri: &str,
+        uri: impl Into<VikingUri>,
         output: Option<&str>,
         abs_limit: Option<i64>,
         show_all_hidden: Option<bool>,
@@ -305,6 +317,7 @@ impl VikingClient {
         limit: Option<i64>,
         level_limit: Option<i64>,
     ) -> Result<Vec<FsEntry>, Error> {
+        let uri = uri.into();
         let query = q(&[
             ("uri", Some(uri.to_string())),
             ("output", output.map(|v| v.to_string())),
@@ -317,16 +330,18 @@ impl VikingClient {
         self._get_with_query(endpoints::v1::FS_TREE, &query).await
     }
 
-    pub async fn fs_stat(&self, uri: &str) -> Result<FsEntry, Error> {
+    pub async fn fs_stat(&self, uri: impl Into<VikingUri>) -> Result<FsEntry, Error> {
+        let uri = uri.into();
         let query = q(&[("uri", Some(uri.to_string()))]);
         self._get_with_query(endpoints::v1::FS_STAT, &query).await
     }
 
     pub async fn fs_mkdir(
         &self,
-        uri: &str,
+        uri: impl Into<VikingUri>,
         description: Option<&str>,
     ) -> Result<FsMkdirResponse, Error> {
+        let uri = uri.into();
         let req = FsMkdirRequest {
             uri: uri.to_string(),
             description: description.map(|s| s.to_string()),
@@ -336,9 +351,10 @@ impl VikingClient {
 
     pub async fn fs_delete(
         &self,
-        uri: &str,
+        uri: impl Into<VikingUri>,
         recursive: Option<bool>,
     ) -> Result<FsDeleteResponse, Error> {
+        let uri = uri.into();
         let query = q(&[
             ("uri", Some(uri.to_string())),
             ("recursive", recursive.map(|v| v.to_string())),
@@ -347,7 +363,13 @@ impl VikingClient {
             .await
     }
 
-    pub async fn fs_mv(&self, from_uri: &str, to_uri: &str) -> Result<FsMvResponse, Error> {
+    pub async fn fs_mv(
+        &self,
+        from_uri: impl Into<VikingUri>,
+        to_uri: impl Into<VikingUri>,
+    ) -> Result<FsMvResponse, Error> {
+        let from_uri = from_uri.into();
+        let to_uri = to_uri.into();
         let req = FsMvRequest {
             from_uri: from_uri.to_string(),
             to_uri: to_uri.to_string(),
@@ -359,10 +381,11 @@ impl VikingClient {
 impl VikingClient {
     pub async fn content_read(
         &self,
-        uri: &str,
+        uri: impl Into<VikingUri>,
         offset: Option<i64>,
         limit: Option<i64>,
     ) -> Result<String, Error> {
+        let uri = uri.into();
         let query = q(&[
             ("uri", Some(uri.to_string())),
             ("offset", offset.map(|v| v.to_string())),
@@ -372,19 +395,22 @@ impl VikingClient {
             .await
     }
 
-    pub async fn content_abstract(&self, uri: &str) -> Result<String, Error> {
+    pub async fn content_abstract(&self, uri: impl Into<VikingUri>) -> Result<String, Error> {
+        let uri = uri.into();
         let query = q(&[("uri", Some(uri.to_string()))]);
         self._get_with_query(endpoints::v1::CONTENT_ABSTRACT, &query)
             .await
     }
 
-    pub async fn content_overview(&self, uri: &str) -> Result<String, Error> {
+    pub async fn content_overview(&self, uri: impl Into<VikingUri>) -> Result<String, Error> {
+        let uri = uri.into();
         let query = q(&[("uri", Some(uri.to_string()))]);
         self._get_with_query(endpoints::v1::CONTENT_OVERVIEW, &query)
             .await
     }
 
-    pub async fn content_download(&self, uri: &str) -> Result<Vec<u8>, Error> {
+    pub async fn content_download(&self, uri: impl Into<VikingUri>) -> Result<Vec<u8>, Error> {
+        let uri = uri.into();
         let query = q(&[("uri", Some(uri.to_string()))]);
         self._get_raw(endpoints::v1::CONTENT_DOWNLOAD, Some(&query))
             .await
@@ -397,7 +423,11 @@ impl VikingClient {
         self._post(endpoints::v1::CONTENT_WRITE, req).await
     }
 
-    pub async fn content_reindex(&self, uri: &str) -> Result<serde_json::Value, Error> {
+    pub async fn content_reindex(
+        &self,
+        uri: impl Into<VikingUri>,
+    ) -> Result<serde_json::Value, Error> {
+        let uri = uri.into();
         let body = serde_json::json!({"uri": uri});
         self._post(endpoints::v1::CONTENT_REINDEX, &body).await
     }
@@ -422,7 +452,8 @@ impl VikingClient {
 }
 
 impl VikingClient {
-    pub async fn relations(&self, uri: &str) -> Result<Vec<RelationEntry>, Error> {
+    pub async fn relations(&self, uri: impl Into<VikingUri>) -> Result<Vec<RelationEntry>, Error> {
+        let uri = uri.into();
         let query = q(&[("uri", Some(uri.to_string()))]);
         self._get_with_query(endpoints::v1::RELATIONS, &query).await
     }
@@ -463,7 +494,7 @@ impl VikingClient {
     }
 
     pub async fn get_session(&self, session_id: &str) -> Result<SessionDetailResponse, Error> {
-        let path = endpoints::v1::SESSION_BY_ID.replace("{session_id}", session_id);
+        let path = make_path!(endpoints::v1::SESSION_BY_ID, session_id);
         self._get(&path).await
     }
 
@@ -472,7 +503,7 @@ impl VikingClient {
         session_id: &str,
         token_budget: Option<i64>,
     ) -> Result<SessionContextResponse, Error> {
-        let path = endpoints::v1::SESSION_CONTEXT.replace("{session_id}", session_id);
+        let path = make_path!(endpoints::v1::SESSION_CONTEXT, session_id);
         if let Some(budget) = token_budget {
             let query = q(&[("token_budget", Some(budget.to_string()))]);
             self._get_with_query(&path, &query).await
@@ -486,24 +517,22 @@ impl VikingClient {
         session_id: &str,
         archive_id: &str,
     ) -> Result<SessionArchiveResponse, Error> {
-        let path = endpoints::v1::SESSION_ARCHIVE
-            .replace("{session_id}", session_id)
-            .replace("{archive_id}", archive_id);
+        let path = make_path!(endpoints::v1::SESSION_ARCHIVE, session_id, archive_id,);
         self._get(&path).await
     }
 
     pub async fn delete_session(&self, session_id: &str) -> Result<SessionDeleteResponse, Error> {
-        let path = endpoints::v1::SESSION_BY_ID.replace("{session_id}", session_id);
+        let path = make_path!(endpoints::v1::SESSION_BY_ID, session_id);
         self._delete(&path).await
     }
 
     pub async fn commit_session(&self, session_id: &str) -> Result<SessionCommitResponse, Error> {
-        let path = endpoints::v1::SESSION_COMMIT.replace("{session_id}", session_id);
+        let path = make_path!(endpoints::v1::SESSION_COMMIT, session_id);
         self._post_no_body(&path).await
     }
 
     pub async fn extract_session(&self, session_id: &str) -> Result<serde_json::Value, Error> {
-        let path = endpoints::v1::SESSION_EXTRACT.replace("{session_id}", session_id);
+        let path = make_path!(endpoints::v1::SESSION_EXTRACT, session_id);
         self._post_no_body(&path).await
     }
 
@@ -512,7 +541,7 @@ impl VikingClient {
         session_id: &str,
         req: &SessionMessagesAddRequest,
     ) -> Result<SessionMessagesAddResponse, Error> {
-        let path = endpoints::v1::SESSION_MESSAGES.replace("{session_id}", session_id);
+        let path = make_path!(endpoints::v1::SESSION_MESSAGES, session_id);
         self._post(&path, req).await
     }
 
@@ -521,14 +550,14 @@ impl VikingClient {
         session_id: &str,
         req: &SessionUsedRequest,
     ) -> Result<SessionUsedResponse, Error> {
-        let path = endpoints::v1::SESSION_USED.replace("{session_id}", session_id);
+        let path = make_path!(endpoints::v1::SESSION_USED, session_id);
         self._post(&path, req).await
     }
 }
 
 impl VikingClient {
     pub async fn get_task(&self, task_id: &str) -> Result<TaskDetailResponse, Error> {
-        let path = endpoints::v1::TASK_BY_ID.replace("{task_id}", task_id);
+        let path = make_path!(endpoints::v1::TASK_BY_ID, task_id);
         self._get(&path).await
     }
 
@@ -555,7 +584,7 @@ impl VikingClient {
     }
 
     pub async fn privacy_list_keys(&self, category: &str) -> Result<Vec<String>, Error> {
-        let path = endpoints::v1::PRIVACY_CONFIGS_CATEGORY.replace("{category}", category);
+        let path = make_path!(endpoints::v1::PRIVACY_CONFIGS_CATEGORY, category);
         self._get(&path).await
     }
 
@@ -564,9 +593,7 @@ impl VikingClient {
         category: &str,
         target_key: &str,
     ) -> Result<PrivacyConfigDetailResponse, Error> {
-        let path = endpoints::v1::PRIVACY_CONFIGS_TARGET
-            .replace("{category}", category)
-            .replace("{target_key}", target_key);
+        let path = make_path!(endpoints::v1::PRIVACY_CONFIGS_TARGET, category, target_key,);
         self._get(&path).await
     }
 
@@ -576,9 +603,7 @@ impl VikingClient {
         target_key: &str,
         req: &PrivacyConfigsUpsertRequest,
     ) -> Result<PrivacyConfigsUpsertResponse, Error> {
-        let path = endpoints::v1::PRIVACY_CONFIGS_TARGET
-            .replace("{category}", category)
-            .replace("{target_key}", target_key);
+        let path = make_path!(endpoints::v1::PRIVACY_CONFIGS_TARGET, category, target_key,);
         self._post(&path, req).await
     }
 
@@ -587,9 +612,11 @@ impl VikingClient {
         category: &str,
         target_key: &str,
     ) -> Result<Vec<i64>, Error> {
-        let path = endpoints::v1::PRIVACY_CONFIGS_VERSIONS
-            .replace("{category}", category)
-            .replace("{target_key}", target_key);
+        let path = make_path!(
+            endpoints::v1::PRIVACY_CONFIGS_VERSIONS,
+            category,
+            target_key,
+        );
         self._get(&path).await
     }
 
@@ -599,10 +626,12 @@ impl VikingClient {
         target_key: &str,
         version: i64,
     ) -> Result<PrivacyConfigSnapshot, Error> {
-        let path = endpoints::v1::PRIVACY_CONFIGS_VERSION
-            .replace("{category}", category)
-            .replace("{target_key}", target_key)
-            .replace("{version}", &version.to_string());
+        let path = make_path!(
+            endpoints::v1::PRIVACY_CONFIGS_VERSION,
+            category,
+            target_key,
+            version,
+        );
         self._get(&path).await
     }
 
@@ -612,9 +641,11 @@ impl VikingClient {
         target_key: &str,
         version: i64,
     ) -> Result<PrivacyConfigsUpsertResponse, Error> {
-        let path = endpoints::v1::PRIVACY_CONFIGS_ACTIVATE
-            .replace("{category}", category)
-            .replace("{target_key}", target_key);
+        let path = make_path!(
+            endpoints::v1::PRIVACY_CONFIGS_ACTIVATE,
+            category,
+            target_key,
+        );
         let req = PrivacyConfigsActivateRequest { version };
         self._post(&path, &req).await
     }
@@ -661,7 +692,11 @@ impl VikingClient {
 }
 
 impl VikingClient {
-    pub async fn maintenance_reindex(&self, uri: &str) -> Result<serde_json::Value, Error> {
+    pub async fn maintenance_reindex(
+        &self,
+        uri: impl Into<VikingUri>,
+    ) -> Result<serde_json::Value, Error> {
+        let uri = uri.into();
         let body = serde_json::json!({"uri": uri});
         self._post(endpoints::v1::MAINTENANCE_REINDEX, &body).await
     }
@@ -673,7 +708,7 @@ impl VikingClient {
     }
 
     pub async fn stats_session(&self, session_id: &str) -> Result<serde_json::Value, Error> {
-        let path = endpoints::v1::STATS_SESSION.replace("{session_id}", session_id);
+        let path = make_path!(endpoints::v1::STATS_SESSION, session_id);
         self._get(&path).await
     }
 }
@@ -694,7 +729,7 @@ impl VikingClient {
         &self,
         account_id: &str,
     ) -> Result<AdminAccountDeleteResponse, Error> {
-        let path = endpoints::v1::ADMIN_ACCOUNT_BY_ID.replace("{account_id}", account_id);
+        let path = make_path!(endpoints::v1::ADMIN_ACCOUNT_BY_ID, account_id);
         self._delete(&path).await
     }
 
@@ -703,7 +738,7 @@ impl VikingClient {
         account_id: &str,
         req: &AdminAccountUsersCreateRequest,
     ) -> Result<AdminAccountUsersCreateResponse, Error> {
-        let path = endpoints::v1::ADMIN_ACCOUNT_USERS.replace("{account_id}", account_id);
+        let path = make_path!(endpoints::v1::ADMIN_ACCOUNT_USERS, account_id);
         self._post(&path, req).await
     }
 
@@ -714,7 +749,7 @@ impl VikingClient {
         name: Option<&str>,
         role: Option<&str>,
     ) -> Result<Vec<AdminUserInfo>, Error> {
-        let path = endpoints::v1::ADMIN_ACCOUNT_USERS.replace("{account_id}", account_id);
+        let path = make_path!(endpoints::v1::ADMIN_ACCOUNT_USERS, account_id);
         let query = q(&[
             ("limit", limit.map(|v| v.to_string())),
             ("name", name.map(|v| v.to_string())),
@@ -724,7 +759,7 @@ impl VikingClient {
     }
 
     pub async fn admin_list_agents(&self, account_id: &str) -> Result<Vec<AdminAgentInfo>, Error> {
-        let path = endpoints::v1::ADMIN_ACCOUNT_AGENTS.replace("{account_id}", account_id);
+        let path = make_path!(endpoints::v1::ADMIN_ACCOUNT_AGENTS, account_id);
         self._get(&path).await
     }
 
@@ -733,9 +768,7 @@ impl VikingClient {
         account_id: &str,
         user_id: &str,
     ) -> Result<AdminAccountUserDeleteResponse, Error> {
-        let path = endpoints::v1::ADMIN_ACCOUNT_USER
-            .replace("{account_id}", account_id)
-            .replace("{user_id}", user_id);
+        let path = make_path!(endpoints::v1::ADMIN_ACCOUNT_USER, account_id, user_id,);
         self._delete(&path).await
     }
 
@@ -745,9 +778,7 @@ impl VikingClient {
         user_id: &str,
         role: &str,
     ) -> Result<AdminAccountUserRoleUpdateResponse, Error> {
-        let path = endpoints::v1::ADMIN_ACCOUNT_USER_ROLE
-            .replace("{account_id}", account_id)
-            .replace("{user_id}", user_id);
+        let path = make_path!(endpoints::v1::ADMIN_ACCOUNT_USER_ROLE, account_id, user_id,);
         let req = AdminAccountUserRoleUpdateRequest {
             role: role.to_string(),
         };
@@ -759,9 +790,7 @@ impl VikingClient {
         account_id: &str,
         user_id: &str,
     ) -> Result<AdminAccountUserKeyRegenerateResponse, Error> {
-        let path = endpoints::v1::ADMIN_ACCOUNT_USER_KEY
-            .replace("{account_id}", account_id)
-            .replace("{user_id}", user_id);
+        let path = make_path!(endpoints::v1::ADMIN_ACCOUNT_USER_KEY, account_id, user_id,);
         self._post_no_body(&path).await
     }
 }

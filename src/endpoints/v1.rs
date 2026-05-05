@@ -1,4 +1,4 @@
-use cfmt::formatcp;
+use cfmt::{concatcp, formatcp};
 
 pub const BASE: &str = "/api/v1";
 
@@ -35,28 +35,23 @@ pub const RELATIONS: &str = formatcp!("{BASE}/relations");
 pub const RELATIONS_LINK: &str = formatcp!("{BASE}/relations/link");
 
 pub const SESSIONS: &str = formatcp!("{BASE}/sessions");
-pub const SESSION_BY_ID: &str = formatcp!("{BASE}/sessions/{{session_id}}");
-pub const SESSION_CONTEXT: &str = formatcp!("{BASE}/sessions/{{session_id}}/context");
-pub const SESSION_ARCHIVE: &str =
-    formatcp!("{BASE}/sessions/{{session_id}}/archives/{{archive_id}}");
-pub const SESSION_COMMIT: &str = formatcp!("{BASE}/sessions/{{session_id}}/commit");
-pub const SESSION_EXTRACT: &str = formatcp!("{BASE}/sessions/{{session_id}}/extract");
-pub const SESSION_MESSAGES: &str = formatcp!("{BASE}/sessions/{{session_id}}/messages");
-pub const SESSION_USED: &str = formatcp!("{BASE}/sessions/{{session_id}}/used");
+pub const SESSION_BY_ID: &str = concatcp!(BASE, "/sessions/{}");
+pub const SESSION_CONTEXT: &str = concatcp!(BASE, "/sessions/{}/context");
+pub const SESSION_ARCHIVE: &str = concatcp!(BASE, "/sessions/{}/archives/{}");
+pub const SESSION_COMMIT: &str = concatcp!(BASE, "/sessions/{}/commit");
+pub const SESSION_EXTRACT: &str = concatcp!(BASE, "/sessions/{}/extract");
+pub const SESSION_MESSAGES: &str = concatcp!(BASE, "/sessions/{}/messages");
+pub const SESSION_USED: &str = concatcp!(BASE, "/sessions/{}/used");
 
 pub const TASKS: &str = formatcp!("{BASE}/tasks");
-pub const TASK_BY_ID: &str = formatcp!("{BASE}/tasks/{{task_id}}");
+pub const TASK_BY_ID: &str = concatcp!(BASE, "/tasks/{}");
 
 pub const PRIVACY_CONFIGS: &str = formatcp!("{BASE}/privacy-configs");
-pub const PRIVACY_CONFIGS_CATEGORY: &str = formatcp!("{BASE}/privacy-configs/{{category}}");
-pub const PRIVACY_CONFIGS_TARGET: &str =
-    formatcp!("{BASE}/privacy-configs/{{category}}/{{target_key}}");
-pub const PRIVACY_CONFIGS_VERSIONS: &str =
-    formatcp!("{BASE}/privacy-configs/{{category}}/{{target_key}}/versions");
-pub const PRIVACY_CONFIGS_VERSION: &str =
-    formatcp!("{BASE}/privacy-configs/{{category}}/{{target_key}}/versions/{{version}}");
-pub const PRIVACY_CONFIGS_ACTIVATE: &str =
-    formatcp!("{BASE}/privacy-configs/{{category}}/{{target_key}}/activate");
+pub const PRIVACY_CONFIGS_CATEGORY: &str = concatcp!(BASE, "/privacy-configs/{}");
+pub const PRIVACY_CONFIGS_TARGET: &str = concatcp!(BASE, "/privacy-configs/{}/{}");
+pub const PRIVACY_CONFIGS_VERSIONS: &str = concatcp!(BASE, "/privacy-configs/{}/{}/versions");
+pub const PRIVACY_CONFIGS_VERSION: &str = concatcp!(BASE, "/privacy-configs/{}/{}/versions/{}");
+pub const PRIVACY_CONFIGS_ACTIVATE: &str = concatcp!(BASE, "/privacy-configs/{}/{}/activate");
 
 pub const OBSERVER_QUEUE: &str = formatcp!("{BASE}/observer/queue");
 pub const OBSERVER_VIKINGDB: &str = formatcp!("{BASE}/observer/vikingdb");
@@ -72,18 +67,15 @@ pub const DEBUG_VECTOR_COUNT: &str = formatcp!("{BASE}/debug/vector/count");
 pub const MAINTENANCE_REINDEX: &str = formatcp!("{BASE}/maintenance/reindex");
 
 pub const STATS_MEMORIES: &str = formatcp!("{BASE}/stats/memories");
-pub const STATS_SESSION: &str = formatcp!("{BASE}/stats/sessions/{{session_id}}");
+pub const STATS_SESSION: &str = concatcp!(BASE, "/stats/sessions/{}");
 
 pub const ADMIN_ACCOUNTS: &str = formatcp!("{BASE}/admin/accounts");
-pub const ADMIN_ACCOUNT_BY_ID: &str = formatcp!("{BASE}/admin/accounts/{{account_id}}");
-pub const ADMIN_ACCOUNT_USERS: &str = formatcp!("{BASE}/admin/accounts/{{account_id}}/users");
-pub const ADMIN_ACCOUNT_AGENTS: &str = formatcp!("{BASE}/admin/accounts/{{account_id}}/agents");
-pub const ADMIN_ACCOUNT_USER: &str =
-    formatcp!("{BASE}/admin/accounts/{{account_id}}/users/{{user_id}}");
-pub const ADMIN_ACCOUNT_USER_ROLE: &str =
-    formatcp!("{BASE}/admin/accounts/{{account_id}}/users/{{user_id}}/role");
-pub const ADMIN_ACCOUNT_USER_KEY: &str =
-    formatcp!("{BASE}/admin/accounts/{{account_id}}/users/{{user_id}}/key");
+pub const ADMIN_ACCOUNT_BY_ID: &str = concatcp!(BASE, "/admin/accounts/{}");
+pub const ADMIN_ACCOUNT_USERS: &str = concatcp!(BASE, "/admin/accounts/{}/users");
+pub const ADMIN_ACCOUNT_AGENTS: &str = concatcp!(BASE, "/admin/accounts/{}/agents");
+pub const ADMIN_ACCOUNT_USER: &str = concatcp!(BASE, "/admin/accounts/{}/users/{}");
+pub const ADMIN_ACCOUNT_USER_ROLE: &str = concatcp!(BASE, "/admin/accounts/{}/users/{}/role");
+pub const ADMIN_ACCOUNT_USER_KEY: &str = concatcp!(BASE, "/admin/accounts/{}/users/{}/key");
 
 pub const HEALTH: &str = "/health";
 pub const READY: &str = "/ready";
@@ -92,6 +84,65 @@ pub const CHAT: &str = "/chat";
 pub const CHAT_STREAM: &str = "/chat/stream";
 
 pub const WEBDAV_RESOURCES: &str = "/webdav/resources";
-pub const WEBDAV_RESOURCES_PATH: &str = "/webdav/resources/{path}";
+pub const WEBDAV_RESOURCES_PATH: &str = "/webdav/resources/{}";
 
 pub const METRICS: &str = "/metrics";
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    macro_rules! make_path {
+        ($t:expr, $($a:expr),+ $(,)?) => {{
+            let mut _s = $t.to_owned();
+            $(
+                _s = _s.replacen("{}", &$a.to_string(), 1);
+            )+
+            _s
+        }};
+    }
+
+    #[test]
+    fn task_by_id() {
+        let path = make_path!(TASK_BY_ID, "uuid-abc");
+        assert_eq!(path, "/api/v1/tasks/uuid-abc");
+    }
+
+    #[test]
+    fn session_by_id() {
+        let path = make_path!(SESSION_BY_ID, "sess-123");
+        assert_eq!(path, "/api/v1/sessions/sess-123");
+    }
+
+    #[test]
+    fn session_archive_two_args() {
+        let path = make_path!(SESSION_ARCHIVE, "sess-123", "archive_002");
+        assert_eq!(path, "/api/v1/sessions/sess-123/archives/archive_002");
+    }
+
+    #[test]
+    fn privacy_configs_version_three_args() {
+        let path = make_path!(PRIVACY_CONFIGS_VERSION, "skill", "my-key", "3");
+        assert_eq!(path, "/api/v1/privacy-configs/skill/my-key/versions/3");
+    }
+
+    #[test]
+    fn admin_account_user_key() {
+        let path = make_path!(ADMIN_ACCOUNT_USER_KEY, "acme", "bob");
+        assert_eq!(path, "/api/v1/admin/accounts/acme/users/bob/key");
+    }
+
+    #[test]
+    fn templates_contain_no_named_placeholders() {
+        assert!(!SESSION_BY_ID.contains("{session_id}"));
+        assert!(!TASK_BY_ID.contains("{task_id}"));
+        assert!(!ADMIN_ACCOUNT_USER_KEY.contains("{account_id}"));
+        assert!(!ADMIN_ACCOUNT_USER_KEY.contains("{user_id}"));
+    }
+
+    #[test]
+    fn webdav_resources_path() {
+        let path = make_path!(WEBDAV_RESOURCES_PATH, "docs/api.md");
+        assert_eq!(path, "/webdav/resources/docs/api.md");
+    }
+}
