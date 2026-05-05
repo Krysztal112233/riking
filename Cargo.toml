@@ -2,9 +2,9 @@
 edition = "2024"
 license = "AGPL-3.0"
 name = "riking"
-version = "0.1.0"
+version = "0.1.1"
 description = "Unofficial OpenViking knowledge base HTTP API client for Rust"
-repository = "https://github.com/Krysztal112233/rinking"
+repository = "https://github.com/Krysztal112233/riking"
 readme = "README.md"
 keywords = ["openviking", "api", "client", "knowledge-base", "http"]
 categories = ["api-bindings", "web-programming"]
